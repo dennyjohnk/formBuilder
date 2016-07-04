@@ -427,8 +427,20 @@ function formBuilderHelpersFn(opts, formBuilder) {
     formBuilder.formData = formDataNew;
   };
 
+/*
   _helpers.jsonSave = function () {
     opts.notify.warning('json data not available yet');
+  };*/
+
+  // NOTE: jsonSchemaSave implemented by Yicong.
+  _helpers.jsonSave = function (form) {
+    var formDataNew = $(form).toJSON(_helpers);
+    if (window.JSON.stringify(formDataNew) === window.JSON.stringify(formBuilder.formData)) {
+      return false;
+    }
+    formBuilder.formData = formDataNew;
+    console.log('logged from jsonSave');
+    console.log(formBuilder.formData);
   };
 
   /**
@@ -446,7 +458,8 @@ function formBuilderHelpersFn(opts, formBuilder) {
     };
 
     // save action for current `dataType`
-    formData = doSave[opts.dataType](form);
+    // formData = doSave[opts.dataType](form);
+    formData = doSave['json'](form);
 
     if (element) {
       element.value = formBuilder.formData;
@@ -1101,7 +1114,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
       newOrderFields.push(field);
     }
 
-    return newOrderFields.filter(Boolean);
+    return newOrderFields.filter(Boolean); // Do not understand Boolean
   };
 
   // forEach that can be used on nodeList
@@ -1207,21 +1220,22 @@ function formBuilderEventsFn() {
       // Uneditable fields or other content you would like to appear before and after regular fields:
       append: false,
       prepend: false,
+      fieldsEditable: true,  //NOTE: used for later on disable editing toggle button
       // array of objects with fields values
       // ex:
-      // defaultFields: [{
-      //   label: 'First Name',
-      //   name: 'first-name',
-      //   required: 'true',
-      //   description: 'Your first name',
-      //   type: 'text'
-      // }, {
-      //   label: 'Phone',
-      //   name: 'phone',
-      //   description: 'How can we reach you?',
-      //   type: 'text'
-      // }],
-      defaultFields: [],
+      defaultFields: [{
+        label: 'First Name',
+        name: 'first-name',
+        required: 'true',
+        description: 'Your first name',
+        type: 'text'
+      }, {
+        label: 'Phone',
+        name: 'phone',
+        description: 'How can we reach you?',
+        type: 'text'
+      }],
+      // defaultFields: [],
       fieldRemoveWarn: false,
       roles: {
         1: 'Administrator'
@@ -1297,7 +1311,7 @@ function formBuilderEventsFn() {
         required: 'Required',
         richText: 'Rich Text Editor',
         roles: 'Access',
-        save: 'Save',
+        save: 'Copy to Input',
         selectOptions: 'Options',
         select: 'Select',
         selectColor: 'Select Color',
@@ -1487,14 +1501,14 @@ function formBuilderEventsFn() {
 
       var $field = $('<li/>', {
         'class': 'icon-' + frmbFields[i].attrs.className,
-        'type': frmbFields[i].type,
-        'name': frmbFields[i].className,
-        'label': frmbFields[i].label
+        'type': frmbFields[i].type,  // all type are undefined?
+        'name': frmbFields[i].className,  // all className are undefined?
+        'label': frmbFields[i].label //'Button', 'Checkbox', 'Checkbox Group'...
       });
 
       $field.data('newFieldData', frmbFields[i]);
 
-      var typeLabel = _helpers.markup('span', frmbFields[i].label);
+      var typeLabel = _helpers.markup('span', frmbFields[i].label);  // fill in the display text
       $field.html(typeLabel).appendTo($cbUL);
     }
 
@@ -1617,11 +1631,15 @@ function formBuilderEventsFn() {
       }
     };
 
+    // prepFieldVars adds to the droppable field
     var prepFieldVars = function prepFieldVars($field) {
       var isNew = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
       var field = {};
 
+      // NOTE: construct the field variable for appending to the droppable area
+      // $field is JQuery.UI object?
+      // $field.data('newFieldData') contains the new field information
       if ($field instanceof jQuery) {
         var fieldData = $field.data('newFieldData');
         if (fieldData) {
@@ -1646,6 +1664,7 @@ function formBuilderEventsFn() {
         field = $field;
       }
 
+      // NOTE: turn field into a prototype object?
       field.label = _helpers.htmlEncode(field.label);
       field.name = isNew ? nameAttr(field) : field.name;
       field.role = field.role;
@@ -1665,7 +1684,7 @@ function formBuilderEventsFn() {
     };
 
     // Parse saved XML template data
-    var getXML = function getXML() {
+    var getXML = function getXML() {  // Called once during loading
       var xml = '';
       if (formBuilder.formData) {
         xml = formBuilder.formData;
@@ -2083,6 +2102,12 @@ function formBuilderEventsFn() {
           tooltip = values.description !== '' ? '<span class="tooltip-element" tooltip="' + values.description + '">?</span>' : '';
 
       var liContents = _helpers.markup('div', [toggleBtn, delBtn], { className: 'field-actions' }).outerHTML;
+      // NOTE: to delete toggle button
+      if (opts.fieldsEditable) {
+        var liContents = _helpers.markup('div', [toggleBtn, delBtn], { className: 'field-actions' }).outerHTML;
+      } else {
+        var liContents = _helpers.markup('div', [delBtn], { className: 'field-actions' }).outerHTML;
+      }
 
       liContents += '<label class="field-label">' + label + '</label>' + tooltip + '<span class="required-asterisk" ' + (required ? 'style="display:inline"' : '') + '> *</span>';
       liContents += _helpers.markup('div', '', { className: 'prev-holder' }).outerHTML;
@@ -2510,6 +2535,105 @@ function formBuilderEventsFn() {
           }
         });
         serialStr += '\n\t</fields>\n</form-template>';
+      } // if "$(this).children().length >= 1"
+    });
+
+    return serialStr;
+  };
+})(jQuery);
+'use strict';
+
+// toJSON is implemented by Yicong
+// NOTE: toJSON will save the form as JSON schema format yet without header
+(function ($) {
+  'use strict';
+
+  $.fn.toJSON = function (_helpers) {
+
+    var serialStr = ''
+
+    var jsonSchema = {
+      "$schema": "http://json-schema.org/draft-03/schema#",
+      "type": "object",
+      "properties": {}
+    };  // NOTE: the object to be returned
+
+    // TODO: adapt this part for toJSON
+    var fieldOptions = function fieldOptions($field) {
+      var options = [];
+      $('.sortable-options li', $field).each(function () {
+        var $option = $(this),
+            attrs = {
+          label: $('.option-label', $option).val(),
+          value: $('.option-value', $option).val(),
+          selected: $('.option-selected', $option).is(':checked')
+        },
+            // option = _helpers.markup('option', $('.option-label', $option).val(), attrs).outerHTML;
+            // TODO: default value filling
+            option = attrs.label + ':' + attrs.value;
+        options.push(option);
+      });
+      // return options.join('') + '\n\t\t';
+      return options;
+    };
+
+    // Begin the core plugin toJSON
+    this.each(function () {
+      var sortableFields = this;
+      if (sortableFields.childNodes.length >= 1) {
+        serialStr += '<form-template>\n\t<fields>';
+        // build new json
+        _helpers.forEach(sortableFields.childNodes, function (index, field) {
+          index = index;
+          var $field = $(field);
+          var fieldData = $field.data('fieldData');
+
+          if (!$field.hasClass('disabled')) {
+            var roleVals = $('.roles-field:checked', field).map(function () {
+              return this.value;
+            }).get();
+            var enableOther = $('[name="enable-other"]:checked', field).length;
+
+            var types = _helpers.getTypes($field);
+            var jsonAttrs = {
+              className: fieldData.className,
+              description: $('input.fld-description', $field).val(),
+              // label: $('.fld-label', $field).val(),
+              title: $('.fld-label', $field).val(),
+              maxlength: $('input.fld-maxlength', $field).val(),
+              multiple: $('input[name="multiple"]', $field).is(':checked'),
+              name: $('input.fld-name', $field).val(),
+              placeholder: $('input.fld-placeholder', $field).val(),
+              required: $('input.required', $field).is(':checked'),
+              toggle: $('.checkbox-toggle', $field).is(':checked'),
+              type: types.type,
+              subtype: types.subtype,
+            };
+            // NOTE: add 'enum' if they are selection fields
+            // NOTE: if a button or paragraph, then skip
+            if (types.type.match(/(select|checkbox-group|radio-group)/)) {
+              jsonAttrs['enum'] = fieldOptions($field);
+            }
+            console.log('logged from toJSON');
+            console.log(types);
+            if (roleVals.length) {
+              jsonAttrs.role = roleVals.join(',');
+            }
+            if (enableOther) {
+              jsonAttrs.enableOther = 'true';
+            }
+            // xmlAttrs = _helpers.trimAttrs(xmlAttrs);
+            // xmlAttrs = _helpers.escapeAttrs(xmlAttrs);
+
+            var fieldContent = '',
+                jsonField;
+
+            // jsonField = _helpers.markup('field', fieldContent, jsonAttrs);
+            // serialStr += '\n\t\t' + jsonField.outerHTML;
+            serialStr += JSON.stringify(jsonAttrs);
+          }
+        });
+        serialStr += 'nothing'
       } // if "$(this).children().length >= 1"
     });
 
