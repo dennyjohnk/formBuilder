@@ -2581,7 +2581,7 @@ function formBuilderEventsFn() {
     this.each(function () {
       var sortableFields = this;
       if (sortableFields.childNodes.length >= 1) {
-        serialStr += '<form-template>\n\t<fields>';
+        // serialStr += '<form-template>\n\t<fields>';
         // build new json
         _helpers.forEach(sortableFields.childNodes, function (index, field) {
           index = index;
@@ -2595,27 +2595,38 @@ function formBuilderEventsFn() {
             var enableOther = $('[name="enable-other"]:checked', field).length;
 
             var types = _helpers.getTypes($field);
+            var name = $('input.fld-name', $field).val();
             var jsonAttrs = {
               className: fieldData.className,
-              description: $('input.fld-description', $field).val(),
-              // label: $('.fld-label', $field).val(),
               title: $('.fld-label', $field).val(),
+              description: $('input.fld-description', $field).val(),
+              placeholder: $('input.fld-placeholder', $field).val(),
               maxlength: $('input.fld-maxlength', $field).val(),
               multiple: $('input[name="multiple"]', $field).is(':checked'),
-              name: $('input.fld-name', $field).val(),
-              placeholder: $('input.fld-placeholder', $field).val(),
+              // name: $('input.fld-name', $field).val(),
               required: $('input.required', $field).is(':checked'),
               toggle: $('.checkbox-toggle', $field).is(':checked'),
-              type: types.type,
-              subtype: types.subtype,
+            //   type: types.type,
+            //   subtype: types.subtype,
             };
-            // NOTE: add 'enum' if they are selection fields
-            // NOTE: if a button or paragraph, then skip
+            // NOTE: refactor types
+            if (types.type.match(/text/)) {
+                jsonAttrs['type'] = "string";
+                if (types.subtype.match(/color/)) {
+                    jsonAttrs['format'] = "color";
+                }
+            } else if (types.type.match(/date/)) {
+                jsonAttrs['type'] = "string";
+                jsonAttrs['format'] = "date";
+            } else if (types.type.match(/file/)){
+                jsonAttrs['type'] = "string";
+                jsonAttrs['format'] = "inputstream";
+            }
+            // NOTE: add 'enum' if it is selection field
+            // TODO: if a button or paragraph, then skip
             if (types.type.match(/(select|checkbox-group|radio-group)/)) {
               jsonAttrs['enum'] = fieldOptions($field);
-            }
-            console.log('logged from toJSON');
-            console.log(types);
+            };
             if (roleVals.length) {
               jsonAttrs.role = roleVals.join(',');
             }
@@ -2630,10 +2641,13 @@ function formBuilderEventsFn() {
 
             // jsonField = _helpers.markup('field', fieldContent, jsonAttrs);
             // serialStr += '\n\t\t' + jsonField.outerHTML;
-            serialStr += JSON.stringify(jsonAttrs);
+            jsonSchema.properties[name] = jsonAttrs;
+            console.log('logged from toJSON');
+            console.log(jsonSchema);
           }
         });
-        serialStr += 'nothing'
+        // serialStr += 'nothing'
+        serialStr = JSON.stringify(jsonSchema);
       } // if "$(this).children().length >= 1"
     });
 
