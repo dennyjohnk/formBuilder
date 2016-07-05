@@ -439,8 +439,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
       return false;
     }
     formBuilder.formData = formDataNew;
-    console.log('logged from jsonSave');
-    console.log(formBuilder.formData);
   };
 
   /**
@@ -1207,35 +1205,76 @@ function formBuilderEventsFn() {
 (function ($) {
   var FormBuilder = function FormBuilder(options, element) {
     var formBuilder = this;
+    console.log('options are');
+    console.log(options);
 
     var defaults = {
       controlPosition: 'right',
       controlOrder: ['autocomplete', 'button', 'checkbox', 'checkbox-group', 'date', 'file', 'header', 'hidden', 'paragraph', 'radio-group', 'select', 'text', 'textarea'],
-      dataType: 'xml',
       /**
        * Field types to be disabled
        * ['text','select','textarea','radio-group','hidden','file','date','checkbox-group','checkbox','button','autocomplete']
        */
-      disableFields: ['autocomplete', 'hidden'],
+      disableFields: ['autocomplete', 'hidden', 'button', 'header', 'paragraph'],
+      // NOTE: if controlPredefined is not empty, then controlOrder and disableFields
+      // are neglected.
+      controlPredefined: [
+        ["text-1467722843562", {
+                                "className": "form-control text-input",
+                                "title": "Your Name",
+                                "description": "",
+                                "placeholder": "",
+                                "maxlength": "",
+                                "multiple": false,
+                                "required": false,
+                                "toggle": false,
+                                "type": "string"
+                              }
+          ],
+        ["select-1467722923403", {
+                                  "className": "form-control select",
+                                  "title": "Your Group",
+                                  "description": "",
+                                  "placeholder": "",
+                                  "multiple": false,
+                                  "required": false,
+                                  "toggle": false,
+                                  "type": "string",
+                                  "enum": [
+                                      "Option 1:option-001",
+                                      "Option 2:option-002"
+                                  ]}],
+        ["date-1467723983696", {
+                                "className": "form-control calendar",
+                                "title": "Date Field",
+                                "description": "",
+                                "multiple": false,
+                                "required": false,
+                                "toggle": false,
+                                "type": "string",
+                                "format": "date"
+                              }],
+      ],
+      dataType: 'xml',
       // Uneditable fields or other content you would like to appear before and after regular fields:
       append: false,
       prepend: false,
       fieldsEditable: true,  //NOTE: used for later on disable editing toggle button
       // array of objects with fields values
       // ex:
-      defaultFields: [{
-        label: 'First Name',
-        name: 'first-name',
-        required: 'true',
-        description: 'Your first name',
-        type: 'text'
-      }, {
-        label: 'Phone',
-        name: 'phone',
-        description: 'How can we reach you?',
-        type: 'text'
-      }],
-      // defaultFields: [],
+      // defaultFields: [{
+      //   label: 'First Name',
+      //   name: 'first-name',
+      //   required: 'true',
+      //   description: 'Your first name',
+      //   type: 'text'
+      // }, {
+      //   label: 'Phone',
+      //   name: 'phone',
+      //   description: 'How can we reach you?',
+      //   type: 'text'
+      // }],
+      defaultFields: [],
       fieldRemoveWarn: false,
       roles: {
         1: 'Administrator'
@@ -1385,105 +1424,132 @@ function formBuilderEventsFn() {
     var lastID = frmbID + '-fld-1',
         boxID = frmbID + '-control-box';
 
-    // create array of field objects to cycle through
-    var frmbFields = [{
-      label: opts.messages.textArea,
-      attrs: {
-        type: 'textarea',
-        className: 'text-area',
-        name: 'textarea'
+    if (opts.controlPredefined) {
+      console.log('printed from if controlPredefined');
+      var frmbFields = [];
+      for (var i in opts.controlPredefined) {
+        var _name = opts.controlPredefined[i][0];
+        var _attrs = opts.controlPredefined[i][1];
+        console.log(_name);
+        console.log(_attrs);
+        // set up the bone of frmbField
+        var frmbField = {
+          label: _attrs.title,
+          attrs: {
+            type: '',
+            className: '',
+            name: _name,
+          },
+        };
+        // refactor json2xml
+        if (_attrs.type==="string") {
+          frmbField.attrs.type = "text";
+          frmbField.attrs.className = "text-input";
+        } //  NOTE: else if
+        frmbFields.push(frmbField);
       }
-    }, {
-      label: opts.messages.text,
-      attrs: {
-        type: 'text',
-        className: 'text-input',
-        name: 'text-input'
-      }
-    }, {
-      label: opts.messages.select,
-      attrs: {
-        type: 'select',
-        className: 'select',
-        name: 'select'
-      }
-    }, {
-      label: opts.messages.radioGroup,
-      attrs: {
-        type: 'radio-group',
-        className: 'radio-group',
-        name: 'radio-group'
-      }
-    }, {
-      label: opts.messages.paragraph,
-      attrs: {
-        type: 'paragraph',
-        className: 'paragraph'
-      }
-    }, {
-      label: opts.messages.hidden,
-      attrs: {
-        type: 'hidden',
-        className: 'hidden-input',
-        name: 'hidden-input'
-      }
-    }, {
-      label: opts.messages.header,
-      attrs: {
-        type: 'header',
-        className: 'header'
-      }
-    }, {
-      label: opts.messages.fileUpload,
-      attrs: {
-        type: 'file',
-        className: 'file-input',
-        name: 'file-input'
-      }
-    }, {
-      label: opts.messages.dateField,
-      attrs: {
-        type: 'date',
-        className: 'calendar',
-        name: 'date-input'
-      }
-    }, {
-      label: opts.messages.checkboxGroup,
-      attrs: {
-        type: 'checkbox-group',
-        className: 'checkbox-group',
-        name: 'checkbox-group'
-      }
-    }, {
-      label: opts.messages.checkbox,
-      attrs: {
-        type: 'checkbox',
-        className: 'checkbox',
-        name: 'checkbox'
-      }
-    }, {
-      label: opts.messages.button,
-      attrs: {
-        type: 'button',
-        className: 'button-input',
-        name: 'button'
-      }
-    }, {
-      label: opts.messages.autocomplete,
-      attrs: {
-        type: 'autocomplete',
-        className: 'autocomplete',
-        name: 'autocomplete'
-      }
-    }];
 
-    frmbFields = _helpers.orderFields(frmbFields);
+    } else {
+      // create array of field objects to cycle through
+      var frmbFields = [{
+        label: opts.messages.textArea,
+        attrs: {
+          type: 'textarea',
+          className: 'text-area',
+          name: 'textarea'
+        }
+      }, {
+        label: opts.messages.text,
+        attrs: {
+          type: 'text',
+          className: 'text-input',
+          name: 'text-input'
+        }
+      }, {
+        label: opts.messages.select,
+        attrs: {
+          type: 'select',
+          className: 'select',
+          name: 'select'
+        }
+      }, {
+        label: opts.messages.radioGroup,
+        attrs: {
+          type: 'radio-group',
+          className: 'radio-group',
+          name: 'radio-group'
+        }
+      }, {
+        label: opts.messages.paragraph,
+        attrs: {
+          type: 'paragraph',
+          className: 'paragraph'
+        }
+      }, {
+        label: opts.messages.hidden,
+        attrs: {
+          type: 'hidden',
+          className: 'hidden-input',
+          name: 'hidden-input'
+        }
+      }, {
+        label: opts.messages.header,
+        attrs: {
+          type: 'header',
+          className: 'header'
+        }
+      }, {
+        label: opts.messages.fileUpload,
+        attrs: {
+          type: 'file',
+          className: 'file-input',
+          name: 'file-input'
+        }
+      }, {
+        label: opts.messages.dateField,
+        attrs: {
+          type: 'date',
+          className: 'calendar',
+          name: 'date-input'
+        }
+      }, {
+        label: opts.messages.checkboxGroup,
+        attrs: {
+          type: 'checkbox-group',
+          className: 'checkbox-group',
+          name: 'checkbox-group'
+        }
+      }, {
+        label: opts.messages.checkbox,
+        attrs: {
+          type: 'checkbox',
+          className: 'checkbox',
+          name: 'checkbox'
+        }
+      }, {
+        label: opts.messages.button,
+        attrs: {
+          type: 'button',
+          className: 'button-input',
+          name: 'button'
+        }
+      }, {
+        label: opts.messages.autocomplete,
+        attrs: {
+          type: 'autocomplete',
+          className: 'autocomplete',
+          name: 'autocomplete'
+        }
+      }];
 
-    if (opts.disableFields) {
-      // remove disabledFields
-      frmbFields = frmbFields.filter(function (field) {
-        return !_helpers.inArray(field.attrs.type, opts.disableFields);
-      });
+      frmbFields = _helpers.orderFields(frmbFields);
+
+      if (opts.disableFields) {
+        // remove disabledFields
+        frmbFields = frmbFields.filter(function (field) {
+          return !_helpers.inArray(field.attrs.type, opts.disableFields);
+        });
+      }
     }
 
     // Create draggable fields for formBuilder
@@ -1664,7 +1730,8 @@ function formBuilderEventsFn() {
         field = $field;
       }
 
-      // NOTE: turn field into a prototype object?
+      // NOTE: prepare the field.value upon appending to the droppable field
+      // TODO: add a json2xml format refactor
       field.label = _helpers.htmlEncode(field.label);
       field.name = isNew ? nameAttr(field) : field.name;
       field.role = field.role;
@@ -1814,6 +1881,8 @@ function formBuilderEventsFn() {
     };
 
     var appendNewField = function appendNewField(values) {
+      console.log('logged from appendNewField');
+      console.log(values);
 
       // TODO: refactor to move functions into this object
       var appendFieldType = {
@@ -2610,11 +2679,19 @@ function formBuilderEventsFn() {
             //   subtype: types.subtype,
             };
             // NOTE: refactor types
-            if (types.type.match(/text/)) {
+            console.log('logged from toJSON');
+            console.log(types);
+            if (types.type.match(/text\b/)) {
                 jsonAttrs['type'] = "string";
                 if (types.subtype.match(/color/)) {
                     jsonAttrs['format'] = "color";
                 }
+            } else if (types.type.match(/select/)) {
+              jsonAttrs['type'] = "string";
+            } else if (types.type.match(/textarea/)) {
+              jsonAttrs['type'] = "string";
+              jsonAttrs['format'] = "text";
+
             } else if (types.type.match(/date/)) {
                 jsonAttrs['type'] = "string";
                 jsonAttrs['format'] = "date";
@@ -2623,10 +2700,11 @@ function formBuilderEventsFn() {
                 jsonAttrs['format'] = "inputstream";
             }
             // NOTE: add 'enum' if it is selection field
-            // TODO: if a button or paragraph, then skip
             if (types.type.match(/(select|checkbox-group|radio-group)/)) {
               jsonAttrs['enum'] = fieldOptions($field);
             };
+            // TODO: if a button or paragraph, then skip
+            //
             if (roleVals.length) {
               jsonAttrs.role = roleVals.join(',');
             }
@@ -2642,12 +2720,10 @@ function formBuilderEventsFn() {
             // jsonField = _helpers.markup('field', fieldContent, jsonAttrs);
             // serialStr += '\n\t\t' + jsonField.outerHTML;
             jsonSchema.properties[name] = jsonAttrs;
-            console.log('logged from toJSON');
-            console.log(jsonSchema);
           }
         });
         // serialStr += 'nothing'
-        serialStr = JSON.stringify(jsonSchema);
+        serialStr = JSON.stringify(jsonSchema, null, 4);
       } // if "$(this).children().length >= 1"
     });
 
