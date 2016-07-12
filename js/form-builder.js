@@ -1205,8 +1205,6 @@ function formBuilderEventsFn() {
 (function ($) {
   var FormBuilder = function FormBuilder(options, element) {
     var formBuilder = this;
-    console.log('options are');
-    console.log(options);
 
     var defaults = {
       controlPosition: 'right',
@@ -1215,7 +1213,7 @@ function formBuilderEventsFn() {
        * Field types to be disabled
        * ['text','select','textarea','radio-group','hidden','file','date','checkbox-group','checkbox','button','autocomplete']
        */
-      disableFields: ['autocomplete', 'hidden', 'button', 'header', 'paragraph'],
+      disableFields: ['autocomplete', 'hidden', 'button', 'checkbox-group', 'header', 'paragraph'],
       // NOTE: if controlPredefined is not empty, then controlOrder and disableFields
       // are neglected.
       controlPredefined: [
@@ -1241,8 +1239,8 @@ function formBuilderEventsFn() {
                                   "toggle": false,
                                   "type": "string",
                                   "enum": [
-                                      "Option 1:option-001",
-                                      "Option 2:option-002"
+                                      "QuestionId-1:DisplayName-1",
+                                      "QuestionId-2:DisplayName-2"
                                   ]}],
         ["date-1467723983696", {
                                 "className": "form-control calendar",
@@ -1425,30 +1423,78 @@ function formBuilderEventsFn() {
         boxID = frmbID + '-control-box';
 
     if (opts.controlPredefined) {
-      console.log('printed from if controlPredefined');
       var frmbFields = [];
       for (var i in opts.controlPredefined) {
-        var _name = opts.controlPredefined[i][0];
-        var _attrs = opts.controlPredefined[i][1];
-        console.log(_name);
-        console.log(_attrs);
+        var _name = opts.controlPredefined[i][0];  // id of form field in data submission
+        var _attrs = opts.controlPredefined[i][1];  // various other json-schema attributes
         // set up the bone of frmbField
         var frmbField = {
           label: _attrs.title,
           attrs: {
             type: '',
-            className: '',
+            className: '',  // defines the icon
             name: _name,
           },
+          json: _attrs,
         };
+        console.log('printed from if controlPredefined');
         // refactor json2xml
         if (_attrs.type==="string") {
+          if ("enum" in _attrs) {
+            // if it is a selection or radio
+            // TODO: implement radio-group
+            // frmbField.attrs.type = "select";
+            // frmbField.attrs.className = "select";
+            switch (_attrs.format) {
+              case 'checkbox':  // radio button
+                  frmbField.attrs.type = "checkbox-group";
+                  frmbField.attrs.className = "checkbox-group";
+                  break;
+              case 'radio':
+                  frmbField.attrs.type = "radio-group";
+                  frmbField.attrs.className = "radio-group";
+              case 'dropdown':  // dropdown menu
+                  frmbField.attrs.type = "select";
+                  frmbField.attrs.className = "select";
+                  break;
+              default:
+                  frmbField.attrs.type = "select";
+                  frmbField.attrs.type = "select";
+            }
+          } else {  // if it is not a selection or radio
+            switch (_attrs.format) {
+              case 'text':  // text area
+                frmbField.attrs.type = "text";
+                frmbField.attrs.className = "text-area";
+                break;
+              case 'date':  // date
+                frmbField.attrs.type = "date";
+                frmbField.attrs.className = "calendar";
+                break;
+              case 'color':  // color
+                // frmbField.attrs.type = "text";
+                // frmbField.attrs.subtype = "color";
+                frmbField.attrs.type = "color";
+                frmbField.attrs.className = "text-area";
+                break;
+              case "inputstream":  // file
+                frmbField.attrs.type = "file";
+                frmbField.attrs.className = "file-input";
+                break;
+              default:  // simple text field
+                frmbField.attrs.type = "text";
+                frmbField.attrs.className = "text-input";
+            }
+          } //  NOTE: else if
+          frmbFields.push(frmbField);
+        } else if (_attrs.type==="boolean") {
+          frmbField.attrs.type = "checkbox";
+          frmbField.attrs.className = "checkbox";
+        } else {  // _attrs.type==="integer"
           frmbField.attrs.type = "text";
           frmbField.attrs.className = "text-input";
-        } //  NOTE: else if
-        frmbFields.push(frmbField);
+        }
       }
-
     } else {
       // create array of field objects to cycle through
       var frmbFields = [{
@@ -1553,7 +1599,6 @@ function formBuilderEventsFn() {
     }
 
     // Create draggable fields for formBuilder
-
     var cbUl = _helpers.markup('ul', null, { id: boxID, className: 'frmb-control' });
 
     if (opts.sortableControls) {
@@ -1564,18 +1609,20 @@ function formBuilderEventsFn() {
 
     // Loop through
     for (var i = frmbFields.length - 1; i >= 0; i--) {
+      console.log('logged from frmbFields loop through');
 
       var $field = $('<li/>', {
         'class': 'icon-' + frmbFields[i].attrs.className,
-        'type': frmbFields[i].type,  // all type are undefined?
-        'name': frmbFields[i].className,  // all className are undefined?
+        'type': frmbFields[i].attrs.type,  // all type are undefined?
+        'name': frmbFields[i].attrs.className,  // all className are undefined?
         'label': frmbFields[i].label //'Button', 'Checkbox', 'Checkbox Group'...
       });
 
       $field.data('newFieldData', frmbFields[i]);
 
       var typeLabel = _helpers.markup('span', frmbFields[i].label);  // fill in the display text
-      $field.html(typeLabel).appendTo($cbUL);
+      console.log(typeLabel);
+      $field.html(typeLabel).appendTo($cbUL);  // NOTE: sets the $field content and add to the controlbox
     }
 
     var viewDataText = opts.dataType === 'xml' ? opts.messages.viewXML : opts.messages.viewJSON;
@@ -1611,12 +1658,14 @@ function formBuilderEventsFn() {
       cancel: 'input, select, .disabled, .form-group, .btn',
       placeholder: 'frmb-placeholder'
     });
+    console.log($sortableFields.attr('class'));  // frmb ui-sortable
 
     // ControlBox with different fields
     $cbUL.sortable({
       helper: 'clone',
       opacity: 0.9,
-      connectWith: $sortableFields,
+    //   connectWith: $sortableFields,
+      connectWith: "#"+frmbID+","+".ui-sortable-handle",
       cursor: 'move',
       placeholder: 'ui-state-highlight',
       start: _helpers.startMoving,
@@ -1700,20 +1749,24 @@ function formBuilderEventsFn() {
     // prepFieldVars adds to the droppable field
     var prepFieldVars = function prepFieldVars($field) {
       var isNew = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
-
       var field = {};
+      var isJson = false;
 
       // NOTE: construct the field variable for appending to the droppable area
-      // $field is JQuery.UI object?
       // $field.data('newFieldData') contains the new field information
+      // 'newFieldData' is copied form frmbField
+      // frmbField is copied from xml/json
       if ($field instanceof jQuery) {
         var fieldData = $field.data('newFieldData');
         if (fieldData) {
+            if (fieldData.json) {
+                isJson = true;
+            };
           field = fieldData.attrs;
           field.label = fieldData.label;
         } else {
           var attrs = $field[0].attributes;
-          if (!isNew) {
+          if (!isNew) {  // NOTE: do not understand
             field.values = $field.children().map(function (index, elem) {
               return {
                 label: $(elem).text(),
@@ -1731,15 +1784,17 @@ function formBuilderEventsFn() {
       }
 
       // NOTE: prepare the field.value upon appending to the droppable field
-      // TODO: add a json2xml format refactor
       field.label = _helpers.htmlEncode(field.label);
-      field.name = isNew ? nameAttr(field) : field.name;
+      field.name = isNew ? nameAttr(field) : field.name;  // NOTE:nameAttr generates a new epoch
       field.role = field.role;
       field.className = field.className || field.class;
       field.required = field.required === 'true' || field.required === true;
       field.maxlength = field.maxlength;
       field.toggle = field.toggle;
       field.description = field.description !== undefined ? _helpers.htmlEncode(field.description) : '';
+      if (isJson) {
+          field.json = fieldData.json;
+      }
 
       var match = /(?:^|\s)btn-(.*?)(?:\s|$)/g.exec(field.className);
       if (match) {
@@ -1748,6 +1803,7 @@ function formBuilderEventsFn() {
 
       appendNewField(field);
       $stageWrap.removeClass('empty');
+      console.log('logged from prepFieldVars');
     };
 
     // Parse saved XML template data
@@ -1859,6 +1915,7 @@ function formBuilderEventsFn() {
       field += advFields(values);
       field += '<div class="form-group field-options">';
       field += '<label class="false-label">' + opts.messages.selectOptions + '</label>';
+
       field += '<div class="sortable-options-wrap">';
       if (values.type === 'select') {
         field += '<div class="allow-multi">';
@@ -1867,8 +1924,19 @@ function formBuilderEventsFn() {
         field += '</div>';
       }
       field += '<ol class="sortable-options">';
-      for (i = 0; i < values.values.length; i++) {
-        field += selectFieldOptions(values.name, values.values[i], values.values[i].selected, values.multiple);
+      if (values.json) {
+          for (i=0; i<values.json.enum.length; i++) {
+              var choiceMix = {
+                  'label': values.json.enum[i].split(':')[1],
+                  'value': values.json.enum[i].split(':')[0],
+              };
+              field += selectFieldOptions(values.name, choiceMix, false, false);
+          }
+      } else {
+          for (i = 0; i < values.values.length; i++) {
+            field += selectFieldOptions(values.name, values.values[i], values.values[i].selected, values.multiple);
+            console.log(values.name);
+          }
       }
       field += '</ol>';
       var addOption = _helpers.markup('a', opts.messages.addOption, { className: 'add add-opt' });
@@ -1878,19 +1946,20 @@ function formBuilderEventsFn() {
       appendFieldLi(opts.messages.select, field, values);
 
       $('.sortable-options').sortable(); // making the dynamically added option fields sortable.
+      console.log('logged from appendSelectList');
+      console.log(values);
+      console.log(opts);  // NOTE: good that opts is a class-wise global variable
     };
 
     var appendNewField = function appendNewField(values) {
-      console.log('logged from appendNewField');
-      console.log(values);
 
       // TODO: refactor to move functions into this object
       var appendFieldType = {
         'select': appendSelectList,
+        'radio-group': appendSelectList,
+        'checkbox-group': appendSelectList,
         'rich-text': appendTextarea,
         'textarea': appendTextarea,
-        'radio-group': appendSelectList,
-        'checkbox-group': appendSelectList
       };
 
       values = values || '';
@@ -1925,7 +1994,7 @@ function formBuilderEventsFn() {
       // });
       advFields.push(textAttribute('label', values));
 
-      // advFields.push(fieldLabel.outerHTML);
+    //   advFields.push(fieldLabel.outerHTML);
 
       values.size = values.size || 'm';
       values.style = values.style || 'default';
@@ -1943,19 +2012,20 @@ function formBuilderEventsFn() {
 
       advFields.push(textAttribute('name', values));
 
-      advFields.push('<div class="form-group access-wrap"><label>' + opts.messages.roles + '</label>');
+    //   // Access related stuff
+    //   advFields.push('<div class="form-group access-wrap"><label>' + opts.messages.roles + '</label>');
+      //
+    //   advFields.push('<input type="checkbox" name="enable_roles" value="" ' + (values.role !== undefined ? 'checked' : '') + ' id="enable_roles-' + lastID + '"/> <label for="enable_roles-' + lastID + '" class="roles-label">' + opts.messages.limitRole + '</label>');
+    //   advFields.push('<div class="available-roles" ' + (values.role !== undefined ? 'style="display:block"' : '') + '>');
+      //
+    //   for (key in opts.roles) {
+    //     if (opts.roles.hasOwnProperty(key)) {
+    //       checked = _helpers.inArray(key, roles) ? 'checked' : '';
+    //       advFields.push('<input type="checkbox" name="roles[]" value="' + key + '" id="fld-' + lastID + '-roles-' + key + '" ' + checked + ' class="roles-field" /><label for="fld-' + lastID + '-roles-' + key + '">' + opts.roles[key] + '</label><br/>');
+    //     }
+    //   }
 
-      advFields.push('<input type="checkbox" name="enable_roles" value="" ' + (values.role !== undefined ? 'checked' : '') + ' id="enable_roles-' + lastID + '"/> <label for="enable_roles-' + lastID + '" class="roles-label">' + opts.messages.limitRole + '</label>');
-      advFields.push('<div class="available-roles" ' + (values.role !== undefined ? 'style="display:block"' : '') + '>');
-
-      for (key in opts.roles) {
-        if (opts.roles.hasOwnProperty(key)) {
-          checked = _helpers.inArray(key, roles) ? 'checked' : '';
-          advFields.push('<input type="checkbox" name="roles[]" value="' + key + '" id="fld-' + lastID + '-roles-' + key + '" ' + checked + ' class="roles-field" /><label for="fld-' + lastID + '-roles-' + key + '">' + opts.roles[key] + '</label><br/>');
-        }
-      }
-
-      advFields.push('</div></div>');
+    //   advFields.push('</div></div>');  // NOTE: why?
 
       if (values.type === 'checkbox-group' || values.type === 'radio-group') {
         advFields.push('<div class="form-group other-wrap"><label>' + opts.messages.enableOther + '</label>');
@@ -2170,8 +2240,7 @@ function formBuilderEventsFn() {
           toggle = values.toggle || undefined,
           tooltip = values.description !== '' ? '<span class="tooltip-element" tooltip="' + values.description + '">?</span>' : '';
 
-      var liContents = _helpers.markup('div', [toggleBtn, delBtn], { className: 'field-actions' }).outerHTML;
-      // NOTE: to delete toggle button
+    //   var liContents = _helpers.markup('div', [toggleBtn, delBtn], { className: 'field-actions' }).outerHTML;
       if (opts.fieldsEditable) {
         var liContents = _helpers.markup('div', [toggleBtn, delBtn], { className: 'field-actions' }).outerHTML;
       } else {
@@ -2183,8 +2252,6 @@ function formBuilderEventsFn() {
       liContents += '<div id="' + lastID + '-holder" class="frm-holder">';
       liContents += '<div class="form-elements">';
 
-      liContents += requiredField(values);
-
       if (values.type === 'checkbox') {
         liContents += '<div class="form-group">';
         liContents += '<label>&nbsp;</label>';
@@ -2192,6 +2259,10 @@ function formBuilderEventsFn() {
         liContents += '</div>';
       }
       liContents += field;
+
+      // NOTE: form validation related stuff are better in the end.
+      liContents += requiredField(values);
+
       liContents += _helpers.markup('a', opts.messages.close, { className: 'close-field' }).outerHTML;
 
       liContents += '</div>';
@@ -2680,7 +2751,6 @@ function formBuilderEventsFn() {
             };
             // NOTE: refactor types
             console.log('logged from toJSON');
-            console.log(types);
             if (types.type.match(/text\b/)) {
                 jsonAttrs['type'] = "string";
                 if (types.subtype.match(/color/)) {
