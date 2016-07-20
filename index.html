@@ -9,24 +9,21 @@
   <textarea id="fb-template"></textarea>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
-  <script src="https://formbuilder.online/assets/js/form-builder.min.js"></script>
+  <!-- <script src="https://formbuilder.online/assets/js/form-builder.min.js"></script> -->
+  <script src="form-builder.js"></script>
   <script>
   jQuery(document).ready(function($) {
     'use strict';
     $(document.getElementById('fb-template')).formBuilder();
     // redefine $sortableFields
-    $('#frmb-0').sortable({
-        // cursor: 'move',
-        // opacity: 0.9,
-        // revert: 150,
-        connectWith: $('#frmb-0 ul'),
-        // beforeStop: _helpers.beforeStop,
-        // stop: _helpers.stopMoving,
-        // cancel: 'input, select, .disabled, .form-group, .btn',
-        // placeholder: 'frmb-placeholder'
-    })
-    var $myLi = $($.parseHTML("<li>Item 1 <ul>  <li>Item 1 1  <ul></ul>   </li> <li>Item 1 2 <ul></ul>  </li>  <li>Item 1 3 <ul></ul>    </li>  </ul>  </li> <li>Item 2 <ul></ul> </li>  <li>Item 3 <ul></ul>   </li> <li>Item 4    <ul></ul> </li>"));
-    $myLi.appendTo("#frmb-0");
+    var $sortableFields = $('#frmb-0');
+    var $myLi = $($.parseHTML("<div> <ul> <li>Item 1 <div></div> <ul> <li>Item 1 1 <ul></ul> </li> <li>Item 1 2 <ul></ul> </li> <li>Item 1 3 <ul></ul> </li> </ul> </li> <li>Item 2 <ul></ul> </li> <li>Item 3 <ul></ul> </li> <li>Item 4 <ul></ul> </li> </ul> </div>"));
+    $myLi.attr('id', 'example5');
+    $myLi.appendTo($sortableFields);
+    $("#example5 ul").sortable({
+        connectWith: "#example5 ul",
+        placeholder: "ui-state-highlight"
+    });
   });
   </script>
 </body>
