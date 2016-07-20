@@ -2753,7 +2753,7 @@ function formBuilderEventsFn() {
                 jsonField;
             if (multipleField) {
               fieldContent = fieldOptions($field);
-              jsonAttrs['children'] = fieldContent;
+              jsonAttrs['options'] = fieldContent;
             }
 
             serialStr.push(jsonAttrs);
