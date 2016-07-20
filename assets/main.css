@@ -1,2 +1,5 @@
-ul { min-height:10px; }
+ul {
+    min-height:10px;
+    background-color: gray;
+}
 /*li { width: 150px; }*/
